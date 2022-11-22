@@ -6,21 +6,21 @@ namespace SimpleBenchmark;
 
 public static class Env
 {
-    public static Options Config { get; private set; } = null!;
+    public static Options Config { get; private set; } = new();
 
     public class Options
     {
         [Option('c', "ConcurrentCount", HelpText = "并发数", Default = 1)]
-        public int ConcurrentCount { get; private set; }
+        public int ConcurrentCount { get; private set; } = 1;
 
-        [Option('t', "CaseRunTime", HelpText = "每个case运行时间", Default = 1)]
-        public int CaseRunTime { get; private set; }
-        
+        [Option('t', "CaseRunTime", HelpText = "每个case运行时长", Default = 1)]
+        public int CaseRunTime { get; private set; } = 1;
 
-        [Option('m', "Model", HelpText = "模式", Default = false)]
+
+        [Option('m', "Model", HelpText = "模式")]
         public bool Model { get; private set; } = false;
     }
-    
+
     public static void Init(string[] args)
     {
         InitParams(args);
@@ -39,15 +39,6 @@ public static class Env
             else
             {
                 throw new Exception("ConcurrentCount must bigger than 0; please run with params[-c $num]");
-            }
-            
-            if (o.CaseRunTime > 0)
-            {
-                Console.WriteLine($"Current CaseRunTime: -c {o.CaseRunTime}");
-            }
-            else
-            {
-                throw new Exception("CaseRunTime must bigger than 0; please run with params[-c $num]");
             }
         }).Value;
     }

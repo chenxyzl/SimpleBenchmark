@@ -89,11 +89,15 @@ public sealed class BenchmarkRunner
         //todo 获取类型符合的方法,以及方法的参数--自用,就不检查合法性了
         var allBenchmarkCleanMethods = typeof(T).GetMethods()
             .Where(typ => typ.GetCustomAttributes(true).OfType<GlobalCleanupAttribute>().Any()).ToArray();
-
+        //检查CaseSetupAttribute
         var caseSetupMethods = typeof(T).GetMethods()
-            .Where(typ => typ.GetCustomAttributes(true).OfType<CaseSetupAttribute>().Any()).ToArray();
+            .Where(typ => typ.GetCustomAttributes(true).OfType<CaseBaseSetupAttribute>().Any()).ToArray();
+        CheckCaseMethod<T, CaseBaseSetupAttribute>(caseSetupMethods);
+
+        //检查CaseCleanupAttribute
         var caseCleanMethods = typeof(T).GetMethods()
-            .Where(typ => typ.GetCustomAttributes(true).OfType<CaseCleanupAttribute>().Any()).ToArray();
+            .Where(typ => typ.GetCustomAttributes(true).OfType<CaseBaseCleanupAttribute>().Any()).ToArray();
+        CheckCaseMethod<T, CaseBaseCleanupAttribute>(caseSetupMethods);
 
         //构造对象
         var obj = Activator.CreateInstance<T>();
@@ -152,6 +156,30 @@ public sealed class BenchmarkRunner
         }
     }
 
+    static void CheckCaseMethod<T, A>(MethodInfo[] caseMethods) where A : CaseBaseAttribute
+    {
+        foreach (var caseMethod in caseMethods)
+        {
+            var caseAttributes = caseMethod.GetCustomAttributes<A>().ToArray();
+            foreach (var caseAttribute in caseAttributes)
+            {
+                var methodInfo = typeof(T).GetMethod(caseAttribute.MethodName);
+                if (methodInfo == null)
+                    throw new Exception($"Method:{caseAttribute.MethodName} not found");
+                if (methodInfo.GetParameters().Length != caseMethod.GetParameters().Length)
+                    throw new Exception(
+                        $"Method:{caseAttribute.MethodName}-{caseMethod.Name} param not same");
+                for (int i = 0; i < methodInfo.GetParameters().Length; i++)
+                {
+                    if (methodInfo.GetParameters()[i].ParameterType.FullName !=
+                        caseMethod.GetParameters()[i].ParameterType.FullName)
+                        throw new Exception(
+                            $"Method:{caseAttribute.MethodName}-{caseMethod.Name} param type not same");
+                }
+            }
+        }
+    }
+
     static void CallAllMethod<T>(T obj, MethodInfo[] allBenchmarkMethods, MethodInfo[] caseSetupMethods,
         MethodInfo[] caseCleanMethods, string paramPrefix) where T : class
     {
@@ -162,40 +190,47 @@ public sealed class BenchmarkRunner
             {
                 foreach (var argumentsAttribute in paramsArray)
                 {
-                    RunSingleMethod(obj, method, argumentsAttribute.Values, caseSetupMethods, caseCleanMethods,
-                        paramPrefix);
+                    RunSingleMethod(obj, method, argumentsAttribute.Values, paramPrefix);
                 }
             }
             else
             {
-                RunSingleMethod(obj, method, new object[] { }, caseSetupMethods, caseCleanMethods, paramPrefix);
+                RunSingleMethod(obj, method, new object[] { }, paramPrefix);
             }
         }
     }
 
-    static void RunSingleMethod<T>(T obj, MethodInfo method, object[] values, MethodInfo[] caseSetupMethod,
-        MethodInfo[] caseCleanMethod, string paramPrefix) where T : class
+    static void RunSingleMethod<T>(T obj, MethodInfo method, object[] values, string paramPrefix) where T : class
     {
-        var str = $"paramPrefix:{paramPrefix}:{method.Name}:{string.Join("-", values.ToArray())}";
-        foreach (var methodInfo in caseSetupMethod)
+        CaseBaseSetupAttribute[] caseSetupAttributes =
+            method.GetCustomAttributes<CaseBaseSetupAttribute>(true).ToArray();
+        CaseBaseCleanupAttribute[] caseCleanupAttributes =
+            method.GetCustomAttributes<CaseBaseCleanupAttribute>(true).ToArray();
+        var str = $"{method.Name}:{paramPrefix}:{string.Join("-", values.ToArray())}";
+        Console.WriteLine($"{str}: 开始...");
+        Console.WriteLine($"{str}: 初始化资源...");
+        foreach (var caseSetup in caseSetupAttributes)
         {
-            methodInfo.Invoke(obj, new object[] { method.Name });
+            obj.GetType().GetMethod(caseSetup.MethodName)!.Invoke(obj, values);
         }
 
-        Console.WriteLine($"{str}: 开始运行...");
+        Console.WriteLine($"{str}: 初始化资源完成...");
+        Console.WriteLine($"{str}: 运行中...");
         var start = Stopwatch.StartNew();
         while (true)
         {
             method.Invoke(obj, values);
-            //执行5分钟这个方法
+            //执行Env.Config.CaseRunTime秒这个方法
             if (start.ElapsedMilliseconds >= Env.Config.CaseRunTime * 1000) break;
         }
 
-        foreach (var methodInfo in caseCleanMethod)
+        Console.WriteLine($"{str}: 结束...");
+        Console.WriteLine($"{str}: 清理资源中...");
+        foreach (var caseCleanup in caseCleanupAttributes)
         {
-            methodInfo.Invoke(obj, new object[] { method.Name });
+            obj.GetType().GetMethod(caseCleanup.MethodName)!.Invoke(obj, values);
         }
 
-        Console.WriteLine($"{str}: 结束运行...");
+        Console.WriteLine($"{str}: 完成...");
     }
 }

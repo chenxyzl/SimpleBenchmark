@@ -4,15 +4,15 @@ public static class Program
 {
     public static void Main(string[] args)
     {
-        Env.Init(args);
+        // Env.Init(args);
         RunBenchmark();
-        Env.Stop();
+        // Env.Stop();
     }
 
     private static void RunBenchmark()
     {
         Console.WriteLine("---Benchmark---");
-        BenchmarkRunner.Run<SimpleBenchmark.BenchmarkTarget>();
+        BenchmarkRunner.Run<SimpleBenchmark.TestClass>();
         Console.WriteLine("---Benchmark完成---");
     }
 }

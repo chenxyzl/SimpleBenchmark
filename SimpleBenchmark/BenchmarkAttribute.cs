@@ -65,12 +65,29 @@ public class GlobalCleanupAttribute : Attribute
 {
 }
 
+
 [AttributeUsage(AttributeTargets.Method)]
-public class CaseSetupAttribute : Attribute
+public class CaseBaseAttribute : Attribute
 {
+    public string MethodName { get; }
+
+    public CaseBaseAttribute(string methodName)
+    {
+        MethodName = methodName;
+    }
+}
+[AttributeUsage(AttributeTargets.Method)]
+public class CaseBaseSetupAttribute : CaseBaseAttribute
+{
+    public CaseBaseSetupAttribute(string methodName) : base(methodName)
+    {
+    }
 }
 
 [AttributeUsage(AttributeTargets.Method)]
-public class CaseCleanupAttribute : Attribute
+public class CaseBaseCleanupAttribute : CaseBaseAttribute
 {
+    public CaseBaseCleanupAttribute(string methodName) : base(methodName)
+    {
+    }
 }
