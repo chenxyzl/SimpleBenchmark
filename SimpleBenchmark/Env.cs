@@ -6,15 +6,15 @@ namespace SimpleBenchmark;
 
 public static class Env
 {
-    public static Options Config { get; private set; } = new();
+    public static Options Config { get; private set; } = null!;
 
     public class Options
     {
         [Option('c', "ConcurrentCount", HelpText = "并发数", Default = 1)]
-        public int ConcurrentCount { get; private set; } = 1;
+        public int ConcurrentCount { get; private set; }
 
         [Option('t', "CaseRunTime", HelpText = "每个case运行时长", Default = 1)]
-        public int CaseRunTime { get; private set; } = 1;
+        public int CaseRunTime { get; private set; }
 
 
         [Option('m', "Model", HelpText = "模式")]

@@ -75,7 +75,7 @@ public sealed class BenchmarkRunner
         return arr[0];
     }
 
-    public static void Run<T>() where T : class
+    public static async Task Run<T>() where T : class
     {
         //todo 获取类型符合的属性--自用,就不检查合法性了
         var tempAllBenchmarkParams = typeof(T).GetProperties()
@@ -140,13 +140,13 @@ public sealed class BenchmarkRunner
                 }
 
                 //运行
-                CallAllMethod(obj, allBenchmarkMethods, caseSetupMethods, caseCleanMethods,
+                await CallAllMethod(obj, allBenchmarkMethods, caseSetupMethods, caseCleanMethods,
                     $"[{string.Join("-", record.ToArray())}]");
             }
         }
         else
         {
-            CallAllMethod(obj, allBenchmarkMethods, caseSetupMethods, caseCleanMethods, "[]");
+            await CallAllMethod(obj, allBenchmarkMethods, caseSetupMethods, caseCleanMethods, "[]");
         }
 
         //再调用Cleanup
@@ -180,7 +180,7 @@ public sealed class BenchmarkRunner
         }
     }
 
-    static void CallAllMethod<T>(T obj, MethodInfo[] allBenchmarkMethods, MethodInfo[] caseSetupMethods,
+    static async Task CallAllMethod<T>(T obj, MethodInfo[] allBenchmarkMethods, MethodInfo[] caseSetupMethods,
         MethodInfo[] caseCleanMethods, string paramPrefix) where T : class
     {
         foreach (var method in allBenchmarkMethods)
@@ -190,17 +190,17 @@ public sealed class BenchmarkRunner
             {
                 foreach (var argumentsAttribute in paramsArray)
                 {
-                    RunSingleMethod(obj, method, argumentsAttribute.Values, paramPrefix);
+                    await RunSingleMethod(obj, method, argumentsAttribute.Values, paramPrefix);
                 }
             }
             else
             {
-                RunSingleMethod(obj, method, new object[] { }, paramPrefix);
+                await RunSingleMethod(obj, method, new object[] { }, paramPrefix);
             }
         }
     }
 
-    static void RunSingleMethod<T>(T obj, MethodInfo method, object[] values, string paramPrefix) where T : class
+    static async Task RunSingleMethod<T>(T obj, MethodInfo method, object[] values, string paramPrefix) where T : class
     {
         CaseBaseSetupAttribute[] caseSetupAttributes =
             method.GetCustomAttributes<CaseBaseSetupAttribute>(true).ToArray();
@@ -211,7 +211,8 @@ public sealed class BenchmarkRunner
         Console.WriteLine($"{str}: 初始化资源...");
         foreach (var caseSetup in caseSetupAttributes)
         {
-            obj.GetType().GetMethod(caseSetup.MethodName)!.Invoke(obj, values);
+            Task v = (Task)obj.GetType().GetMethod(caseSetup.MethodName)!.Invoke(obj, values)!;
+            await v;
         }
 
         Console.WriteLine($"{str}: 初始化资源完成...");
@@ -219,7 +220,8 @@ public sealed class BenchmarkRunner
         var start = Stopwatch.StartNew();
         while (true)
         {
-            method.Invoke(obj, values);
+            Task v = (Task)method.Invoke(obj, values)!;
+            await v;
             //执行Env.Config.CaseRunTime秒这个方法
             if (start.ElapsedMilliseconds >= Env.Config.CaseRunTime * 1000) break;
         }
@@ -228,7 +230,8 @@ public sealed class BenchmarkRunner
         Console.WriteLine($"{str}: 清理资源中...");
         foreach (var caseCleanup in caseCleanupAttributes)
         {
-            obj.GetType().GetMethod(caseCleanup.MethodName)!.Invoke(obj, values);
+            Task v = (Task)obj.GetType().GetMethod(caseCleanup.MethodName)!.Invoke(obj, values)!;
+            await v;
         }
 
         Console.WriteLine($"{str}: 完成...");

@@ -15,7 +15,7 @@ public class TestClass
     [CaseBaseSetup("BenchmarkInsertBefore")]
     [CaseBaseCleanup("BenchmarkInsertAfter")]
     //测试insert在不同大小下的读写性能
-    public void BenchmarkInsert(int dataSize) //插入 清表,确保没有老数据
+    public Task BenchmarkInsert(int dataSize) //插入 清表,确保没有老数据
     {
         //1.写入--benchmark.dotnet动态修改dataSize
         //prometheus记录BenchmarkInsert写入次数+1
@@ -23,6 +23,7 @@ public class TestClass
         //prometheus记录BenchmarkInsert读取次数+1
         // Env.GetMetric("BenchmarkInsert").Inc(1);
         Console.WriteLine("BenchmarkInsert");
+        return Task.CompletedTask;
     }
 
     [Benchmark]
@@ -31,8 +32,9 @@ public class TestClass
     [Arguments(500 * 1024)]
     [Arguments(1024 * 1024)]
     //测试replace在不同大小下的读写性能
-    public void BenchmarkReplace(int dataSize) //全量替换 清表,重新构造数据
+    public Task BenchmarkReplace(int dataSize) //全量替换 清表,重新构造数据
     {
+        return Task.CompletedTask;
     }
     //
     // [Benchmark]
@@ -57,13 +59,15 @@ public class TestClass
     // public void BenchmarkInsertKeySize(int keySize, int totalSize) //增量更新 清表,重新构造数据
     // {
     // }
-    public void BenchmarkInsertBefore(int dataSize)
+    public Task BenchmarkInsertBefore(int dataSize)
     {
         Console.WriteLine("BenchmarkInsertBefore");
+        return Task.CompletedTask;
     }
-    public void BenchmarkInsertAfter(int dataSize)
+    public Task BenchmarkInsertAfter(int dataSize)
     {
         Console.WriteLine("BenchmarkInsertAfter");
+        return Task.CompletedTask;
     }
     
     [GlobalSetup]
